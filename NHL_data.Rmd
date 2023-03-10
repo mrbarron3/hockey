@@ -36,12 +36,14 @@ hockey_stats = game_stats %>%
   full_join(teams) %>%
   filter(settled_in != "tbc") %>%
   mutate(name = str_replace(name, "Rangers ", ""), name = str_replace(name, "Islanders ", ""), name = str_replace(name, "NY", "New York"), won = str_replace(won, "TRUE", "win"), won = str_replace(won, "FALSE", "loss")) %>%
-  select(name, HoA, won, goals, shots, settled_in, game_id)
+  select(name, HoA, won, goals, shots, settled_in, game_id) %>%
+  distinct()
 ```
 
 ```{r}
 # text
-descriptive_text = p("Explore NHL Game Data from the 2000-2001 season to the 2019-2020 season from 31 active and 2 defunct (Atlanta Thrashers and Phoenix Coyotes) NHL teams. (The Atlanta Thrashers and Phoenix Coyotes only have information on away games). This data was downloaded from an ", a("NHL Game Data repository", href="https://www.kaggle.com/datasets/martinellis/nhl-game-data?resource=download"), "created by Martin Ellis, using data originally documented by Kevin Sidwar, an NHL fan, who began documenting the still un-documented NHL stats API. Select a team, or multiple teams, from the dropdown menu as well as the game outcome of interest to view corresponding plots. Select both possible game outcomes to view all games played by the selected team/teams. Brush over the scatter plot to refine your selection. Refresh the page to eliminate your brush selection.")
+descriptive_text = p("Explore NHL Game Data from the 2000-2001 season to the 2019-2020 season from 31 active and 2 defunct (Atlanta Thrashers and Phoenix Coyotes) NHL teams. This data was downloaded from an ", a("NHL Game Data repository", href="https://www.kaggle.com/datasets/martinellis/nhl-game-data?resource=download"), "created by Martin Ellis, using data originally documented by Kevin Sidwar, an NHL fan, who began documenting the still un-documented NHL stats API.")
+text2 = p("Select a team, or multiple teams, from the dropdown menu as well as the game outcome of interest to view corresponding plots. Select both possible game outcomes to view all games played by the selected team/teams. Brush over the scatter plot to refine your selection. Refresh the page to eliminate your brush selection.")
 ```
 
 ```{r}
@@ -60,7 +62,7 @@ plot_scatter = function(df) {
   ggplot(df) +
     geom_point(aes(shots, goals, shape = selected, color = name)) +
     scale_shape_manual(values = c(20, 19))+
-    scale_y_continuous(breaks = seq(0, 10, by = 1), 
+    scale_y_continuous(breaks = seq(0, 13, by = 1), 
                        expand = c(0, 0.1, 0.1, 0.1)) +
     labs(x = "Shots on Goal", y = "Goals", color = "Team", shape = "Selected") +
     transparent()
@@ -99,7 +101,8 @@ ui <- fluidPage(
     sidebarPanel(
       selectInput("team", "Team(s)", sort(unique(hockey_stats$name)), c("New York Rangers", "New York Islanders"), multiple = TRUE),
       selectInput("outcome", "Game Outcome", unique(hockey_stats$won), c("win"), multiple = TRUE),
-      descriptive_text
+      descriptive_text,
+      text2
     ) ,
     mainPanel(
       plotOutput("scatter", brush = "plot_brush"),
