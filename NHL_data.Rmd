@@ -89,8 +89,8 @@ reset_selection <- function(x, brush) {
 ui <- fluidPage(
   theme = bs_theme(
     bootswatch = "simplex",
-    fg = "#261912", #foreground
-    bg = "#F2F2F2", #background
+    fg = "#261912", 
+    bg = "#F2F2F2", 
     primary = "#bf7796",
     base_font = font_google("Inter"), 
     heading_font = font_google("Bebas Neue")
