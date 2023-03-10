@@ -35,9 +35,8 @@ teams = team_info %>%
 hockey_stats = game_stats %>% 
   full_join(teams) %>%
   filter(settled_in != "tbc") %>%
-  drop_na() %>%
   mutate(name = str_replace(name, "Rangers ", ""), name = str_replace(name, "Islanders ", ""), name = str_replace(name, "NY", "New York"), won = str_replace(won, "TRUE", "win"), won = str_replace(won, "FALSE", "loss")) %>%
-  select(name, HoA, won, goals, shots, settled_in)
+  select(name, HoA, won, goals, shots, settled_in, game_id)
 ```
 
 ```{r}
