@@ -96,7 +96,7 @@ ui <- fluidPage(
     heading_font = font_google("Bebas Neue")
     
   ),
-  titlePanel("Hockey Game Stats Explorer"),
+  titlePanel("NHL Game Stats Explorer"),
   sidebarLayout(
     sidebarPanel(
       selectInput("team", "Team(s)", sort(unique(hockey_stats$name)), c("New York Rangers", "New York Islanders"), multiple = TRUE),
