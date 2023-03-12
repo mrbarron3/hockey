@@ -14,7 +14,6 @@ knitr::opts_chunk$set(warnings = FALSE, message = FALSE)
 ```{r, warning = FALSE, include = FALSE}
 # imports
 library(tidyverse)
-library(lubridate)
 library(shiny)
 library(bslib)
 theme_set(theme_bw())
