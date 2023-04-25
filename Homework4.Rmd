@@ -1,0 +1,109 @@
+---
+title: "Homework4"
+author: "Maya Barron"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, warning = FALSE, include = FALSE}
+# imports
+library(tidyverse)
+library(caret)
+library(DALEX)
+library(rstan)
+
+theme1 <- theme_minimal() + 
+  theme(
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "#f7f7f7"),
+    panel.border = element_rect(fill = NA, color = "#0c0c0c", size = 0.6),
+    legend.position = "bottom"
+  )
+theme_set(theme1)
+```
+
+```{r, message = FALSE}
+# datasets
+team_info = read_csv("https://raw.githubusercontent.com/mrbarron3/hockey/main/team_info.csv") 
+game_stats = read_csv("https://raw.githubusercontent.com/mrbarron3/hockey/main/game_teams_stats.csv") 
+```
+
+```{r, warning = FALSE}
+# dataset manipulation
+teams = team_info %>%
+  select(team_id, shortName, teamName) %>%
+  unite("name", shortName:teamName, sep = " ")
+
+hockey_stats = game_stats %>% 
+  full_join(teams) %>%
+  filter(settled_in != "tbc") %>%
+  mutate(name = str_replace(name, "Rangers ", ""), name = str_replace(name, "Islanders ", ""), name = str_replace(name, "NY", "New York"), won = str_replace(won, "TRUE", "win"), won = str_replace(won, "FALSE", "loss")) %>%
+  select(name, everything(), -startRinkSide, -head_coach, -team_id, ) %>%
+  rename("faceoffWinPct" = "faceOffWinPercentage", "ppGoals" = "powerPlayGoals", "ppOpportunities" = "powerPlayOpportunities") %>%
+  mutate(across(where(is.character), as.factor)) %>%
+  distinct()
+```
+
+### Variable Descriptions
+- name: the city and name of the team
+- game_id: a unique code indicating the game each row is referring to; this variable confirms that seemingly similar games won't be deleted as duplicates as long as they have different game_ids; each game_id should have two rows associated with it, one for each team that played in it
+- HoA: stands for "home or away"; states whether the game was played at home or away
+- won: states the outcome of the game
+- settled_in: states whether the game ended within the normal 60-minute regulation time (REG), or if overtime was needed to settle the match (OT) (OT also includes games that ended in a shootout)
+- goals: indicates the number of goals scored by the team (name) in this game (game_id)
+- shots: indicates the number of shots on goal by the team (name) in this game (game_id)
+- hits: indicates the number of hits delivered by the team (name) in this game (game_id)
+- pim: indicates the number of penalty infraction minutes incurred by the team (name) in this game (game_id)
+- ppOpportunities: indicates the number of power plays the team (name) was granted in this game (game_id) as a result of the opposing team incurring penalties; a power play is when a given team has at least 1 more player on the ice than the opposing team; this is caused by a player on the opposing team committing an infraction, and thus incurring a penalty and being placed in the penalty box
+- ppGoals: indicates the number of goals the team (name) scored in this game (game_id) while on a power play
+- faceoffWinPct: indicates the percentage of faceoffs that were won by the team (name) in this game (game_id)
+- giveaways: indicates the number of giveaways performed by the team (name) in this game (game_id); a giveaway is an unforced mistake that causes a player with possession of the puck to lose it to a player on the opposing team
+- takeaways: indicates the number of takeaways performed by the team (name) in this game (game_id); a takeaway is any type of pressure applied to an offensive player resulting in them losing possession of the puck
+- blocked: indicates the number of shots on goal that were deflected or blocked by the team (name), meaning they did not count as "shots" for the opposing team in this game (game_id) 
+
+```{r, warning = FALSE, message = FALSE}
+# fit and profile setup
+x = select(hockey_stats, -won, -game_id) 
+y = hockey_stats$won 
+  
+# this is a very large dataset, therefore, the fit function will take a very long time to run
+fit = train(x = x, y = y, method = "gbm", verbose = FALSE)
+
+explanation = explain(model = fit, data = x, y = hockey_stats$won)
+
+profile = model_profile(explainer = explanation, groups = "HoA")
+```
+
+### CP profile for goals, grouped by game location (home or away)
+```{r}
+plot(profile, geom = "profiles", variables = "goals") +
+  scale_color_manual(values = c("#202121", "#f75252")) +
+  theme1 +
+  labs(y = "Prediction", color = "Game Location", title = "Ceteris Paribus Profile Predicting a Win", subtitle = "Created for the Train Model") +
+  scale_x_continuous(expand = c(0, 0, 0, 0))
+```
+
+### PD profile including all numeric game stats, grouped by game location
+```{r, warning = FALSE}
+plot(profile, geom = "aggregates") +
+  theme1 +
+  labs(y = "Average Prediction", title = "Partial Dependence Profile Predicting a Win") +
+  scale_color_manual(values = c("#202121", "#f75252")) +
+  scale_x_continuous(expand = c(0.03, 0, 0.03, 0))
+```
+
+### PD profile including all numeric game stats, grouped by whether or not extra time was needed
+```{r}
+profile = model_profile(explainer = explanation, groups = "settled_in")
+
+plot(profile, geom = "aggregates") +
+  theme1 +
+  labs(y = "Average Prediction", title = "Partial Dependence Profile Predicting a Win") +
+  scale_x_continuous(expand = c(0.03, 0, 0.03, 0))
+```
+
+
